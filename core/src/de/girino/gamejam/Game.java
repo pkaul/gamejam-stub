@@ -4,10 +4,15 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 
@@ -18,15 +23,30 @@ public class Game extends ApplicationAdapter {
 
 	private static final String LOGTAG = "GameJam";
 
-	private final int SPRITESHEET_ROWS = 16;
-	private final int SPRITESHEET_COLUMNS = 16;
+	// --- graphics
+
+	private static final int SPRITESHEET_ROWS = 16;
+	private static final int SPRITESHEET_COLUMNS = 16;
+
+	private static final int VIEWPORT_WIDTH = 512;
+	private static final int VIEWPORT_HEIGHT = 512;
 
 	private SpriteBatch batch;
 	private TextureRegion[][] sprites;
+
+	private OrthographicCamera camera;
+	private Skin skin;
+
+	private TiledMapRenderer tileMapRenderer;
+
+	// --- entities
+
 	private Sprite hero;
 	private Sprite enemy;
-	private Skin skin;
 	private Label message;
+	private TiledMap tileMap;
+
+
 	
 	@Override
 	public void create () {
@@ -44,7 +64,16 @@ public class Game extends ApplicationAdapter {
 
 		this.skin = new Skin(Gdx.files.internal("uiskin.json"));
 
+		camera = new OrthographicCamera();
+		camera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+   		batch.setProjectionMatrix(camera.combined);
+
 		this.message = new Label("", this.skin);
+
+		// Edit the world with "Tiled Map" http://www.mapeditor.org/download.html
+		tileMap = new TmxMapLoader().load("world.tmx");
+   		tileMapRenderer = new OrthogonalTiledMapRenderer(tileMap);
+		tileMapRenderer.setView(camera);
 
 		Gdx.app.log(LOGTAG, "Created");
 	}
@@ -73,6 +102,7 @@ public class Game extends ApplicationAdapter {
 		handleAI();
 
 		batch.begin();
+		drawBackground();
 		drawSprites(batch);
 		drawForeground(batch);
 		batch.end();
@@ -123,7 +153,12 @@ public class Game extends ApplicationAdapter {
 		}
 	}
 
+	private void drawBackground() {
+		tileMapRenderer.render();
+	}
+
 	private void drawSprites(SpriteBatch batch) {
+
 		hero.draw(batch);
 		enemy.draw(batch);
 	}
@@ -131,7 +166,6 @@ public class Game extends ApplicationAdapter {
 	private void drawForeground(SpriteBatch batch) {
 		message.draw(batch, 0.5f);
 	}
-
 
 	private TextureRegion[][] getSprites() {
 		Texture spriteSheet =  new Texture(Gdx.files.internal("spritesheet_example.png"));
