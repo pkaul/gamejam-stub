@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 
 /**
  * GameJam Game
@@ -23,6 +25,8 @@ public class Game extends ApplicationAdapter {
 	private TextureRegion[][] sprites;
 	private Sprite hero;
 	private Sprite enemy;
+	private Skin skin;
+	private Label message;
 	
 	@Override
 	public void create () {
@@ -37,6 +41,10 @@ public class Game extends ApplicationAdapter {
 		this.enemy = new Sprite(sprites[0][11]);
 		this.enemy.setX(50);
 		this.enemy.setY(50);
+
+		this.skin = new Skin(Gdx.files.internal("uiskin.json"));
+
+		this.message = new Label("", this.skin);
 
 		Gdx.app.log(LOGTAG, "Created");
 	}
@@ -62,9 +70,11 @@ public class Game extends ApplicationAdapter {
 //		}
 
 		handleInput();
+		handleAI();
 
 		batch.begin();
 		drawSprites(batch);
+		drawForeground(batch);
 		batch.end();
 
 	}
@@ -103,9 +113,23 @@ public class Game extends ApplicationAdapter {
 		}
 	}
 
+	private void handleAI() {
+
+		if( enemy.getBoundingRectangle().overlaps(hero.getBoundingRectangle()) ) {
+			this.message.setText("Ooops!");
+		}
+		else {
+			this.message.setText("");
+		}
+	}
+
 	private void drawSprites(SpriteBatch batch) {
 		hero.draw(batch);
 		enemy.draw(batch);
+	}
+
+	private void drawForeground(SpriteBatch batch) {
+		message.draw(batch, 0.5f);
 	}
 
 
