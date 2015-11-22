@@ -1,7 +1,12 @@
 Gamejam Project Stub (LibGDX)
 ==============================
 
-A LibGDX based game stub to be used for GameJamming 
+A LibGDX based game stub to be used for Game-Jamming 
+
+Prerequisites
+----
+
+* Java is installed
 
 Running the game
 -----
