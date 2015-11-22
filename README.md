@@ -1,16 +1,32 @@
 Gamejam Project Stub (LibGDX)
 ==============================
 
-This stub has been generated according to https://github.com/libgdx/libgdx/wiki/Project-Setup-Gradle by using gdx-setup.jar from https://libgdx.badlogicgames.com/download.html
+A LibGDX based game stub to be used for GameJamming 
 
-Usage
+Running the game
 -----
-Type
+On command line, simply type
 
 	gradlew desktop:run
 
+When using Intellij (see https://github.com/libgdx/libgdx/wiki/Gradle-and-Intellij-IDEA) simply "right-click + run" on 
 
-See also
+	de.girino.gamejam.desktop.DesktopLauncher
 
+Extend the game
+-----
+
+Use 
+
+	de.girino.gamejam.Game
+	
+as an entry point.
+
+
+Resources
+-----
+     
+* https://github.com/libgdx/libgdx/wiki/Project-Setup-Gradle
+* https://libgdx.badlogicgames.com/download.html
 * https://github.com/libgdx/libgdx/wiki/Gradle-and-Intellij-IDEA
 * https://github.com/libgdx/libgdx/wiki/Gradle-on-the-Commandline
