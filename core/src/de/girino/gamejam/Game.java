@@ -28,8 +28,8 @@ public class Game extends ApplicationAdapter {
 	private static final int SPRITESHEET_ROWS = 16;
 	private static final int SPRITESHEET_COLUMNS = 16;
 
-	private static final int VIEWPORT_WIDTH = 512;
-	private static final int VIEWPORT_HEIGHT = 512;
+	private final int viewportWidth;
+	private final int viewportHeight;
 
 	private SpriteBatch batch;
 	private TextureRegion[][] sprites;
@@ -46,6 +46,11 @@ public class Game extends ApplicationAdapter {
 	private Label message;
 	private TiledMap tileMap;
 
+	public Game(int viewportWidth, int viewportHeight) {
+
+		this.viewportWidth = viewportWidth;
+		this.viewportHeight = viewportHeight;
+	}
 
 	
 	@Override
@@ -62,18 +67,8 @@ public class Game extends ApplicationAdapter {
 		this.enemy.setX(50);
 		this.enemy.setY(50);
 
-		this.skin = new Skin(Gdx.files.internal("uiskin.json"));
-
-		camera = new OrthographicCamera();
-		camera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-   		batch.setProjectionMatrix(camera.combined);
-
-		this.message = new Label("", this.skin);
-
-		// Edit the world with "Tiled Map" http://www.mapeditor.org/download.html
-		tileMap = new TmxMapLoader().load("world.tmx");
-   		tileMapRenderer = new OrthogonalTiledMapRenderer(tileMap);
-		tileMapRenderer.setView(camera);
+		initWorld(this.batch);
+		initUi();
 
 		Gdx.app.log(LOGTAG, "Created");
 	}
@@ -83,26 +78,15 @@ public class Game extends ApplicationAdapter {
 
 		// reset last frame
 		Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
+        //Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-		// draw all available sprites
-//		for( int y=0; y<sprites.length; y++ ) {
-//
-//			for( int x=0; x<sprites[y].length; x++ ) {
-//
-//				TextureRegion sprite = sprites[y][x];
-//
-//				batch.begin();
-//				batch.draw(sprite, x*32, y*32);
-//				batch.end();
-//			}
-//		}
 
 		handleInput();
 		handleAI();
 
-		batch.begin();
-		drawBackground();
+		drawGround();
+
+        batch.begin();
 		drawSprites(batch);
 		drawForeground(batch);
 		batch.end();
@@ -125,6 +109,25 @@ public class Game extends ApplicationAdapter {
 	}
 
 	// ==============
+
+	private void initWorld(SpriteBatch batch) {
+
+		camera = new OrthographicCamera();
+		camera.setToOrtho(false, viewportWidth, viewportHeight);
+		batch.setProjectionMatrix(camera.combined);
+
+		// Edit the world with "Tiled Map" http://www.mapeditor.org/download.html
+		tileMap = new TmxMapLoader().load("world.tmx");
+		tileMapRenderer = new OrthogonalTiledMapRenderer(tileMap);
+		tileMapRenderer.setView(camera);
+	}
+
+	private void initUi() {
+		this.skin = new Skin(Gdx.files.internal("uiskin.json"));
+		this.message = new Label("xxx", this.skin);
+	}
+
+    // --------------------
 
 	private void handleInput() {
 
@@ -153,8 +156,13 @@ public class Game extends ApplicationAdapter {
 		}
 	}
 
-	private void drawBackground() {
-		tileMapRenderer.render();
+
+    // -----------------------
+
+	private void drawGround() {
+        camera.update();
+        tileMapRenderer.setView(camera);
+        tileMapRenderer.render();
 	}
 
 	private void drawSprites(SpriteBatch batch) {
