@@ -67,7 +67,7 @@ public class Game extends ApplicationAdapter {
 		this.enemy.setX(50);
 		this.enemy.setY(50);
 
-		initWorld(this.batch);
+		initWorld();
 		initUi();
 
 		Gdx.app.log(LOGTAG, "Created");
@@ -84,7 +84,9 @@ public class Game extends ApplicationAdapter {
 		handleInput();
 		handleAI();
 
-		drawGround();
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+		drawGround(camera);
 
         batch.begin();
 		drawSprites(batch);
@@ -110,11 +112,10 @@ public class Game extends ApplicationAdapter {
 
 	// ==============
 
-	private void initWorld(SpriteBatch batch) {
+	private void initWorld() {
 
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, viewportWidth, viewportHeight);
-		batch.setProjectionMatrix(camera.combined);
 
 		// Edit the world with "Tiled Map" http://www.mapeditor.org/download.html
 		tileMap = new TmxMapLoader().load("world.tmx");
@@ -131,6 +132,7 @@ public class Game extends ApplicationAdapter {
 
 	private void handleInput() {
 
+        // movement of hero
 		if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
 			hero.translateX(-1);
 		}
@@ -144,7 +146,20 @@ public class Game extends ApplicationAdapter {
 		else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
 			hero.translateY(1);
 		}
-	}
+
+        // movement of background
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            camera.translate(-1, 0);
+        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            camera.translate(1, 0);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            camera.translate(0, -1);
+        }
+        else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            camera.translate(0, 1);
+        }
+    }
 
 	private void handleAI() {
 
@@ -159,8 +174,7 @@ public class Game extends ApplicationAdapter {
 
     // -----------------------
 
-	private void drawGround() {
-        camera.update();
+	private void drawGround(OrthographicCamera camera) {
         tileMapRenderer.setView(camera);
         tileMapRenderer.render();
 	}
