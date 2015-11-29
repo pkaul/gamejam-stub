@@ -33,7 +33,8 @@ public class Game extends ApplicationAdapter {
 	private final int viewportWidth;
 	private final int viewportHeight;
 
-	private SpriteBatch batch;
+    private SpriteBatch foregroundBatch;
+	private SpriteBatch worldBatch;
 	private TextureRegion[][] sprites;
 
 	private OrthographicCamera camera;
@@ -50,8 +51,6 @@ public class Game extends ApplicationAdapter {
 	// --- entities
 	private Sprite hero;
 	private Sprite enemy;
-	private Label message;
-	private TiledMap tileMap;
 
 	public Game(int viewportWidth, int viewportHeight) {
 
@@ -63,7 +62,8 @@ public class Game extends ApplicationAdapter {
 	@Override
 	public void create () {
 
-		this.batch = new SpriteBatch();
+		this.worldBatch = new SpriteBatch();
+        this.foregroundBatch = new SpriteBatch();
 		this.sprites = getSprites();
 
 		this.hero = new Sprite(sprites[0][10]);
@@ -92,15 +92,18 @@ public class Game extends ApplicationAdapter {
 		handleAI();
 
         camera.update();
-        batch.setProjectionMatrix(camera.combined);
+        worldBatch.setProjectionMatrix(camera.combined);
 		drawGround(camera);
 
-        batch.begin();
-		drawSprites(batch);
-		drawForeground(batch);
-		batch.end();
+        worldBatch.begin();
+		drawSprites(worldBatch);
+        worldBatch.end();
 
-	}
+        foregroundBatch.begin();
+		drawForeground(foregroundBatch);
+        foregroundBatch.end();
+
+    }
 
 	@Override
 	public void resize(int width, int height) {
