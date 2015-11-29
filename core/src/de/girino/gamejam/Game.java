@@ -15,6 +15,8 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
+
 
 /**
  * GameJam Game
@@ -35,12 +37,17 @@ public class Game extends ApplicationAdapter {
 	private TextureRegion[][] sprites;
 
 	private OrthographicCamera camera;
-	private Skin skin;
 
+    // --- background
+    private TiledMap tileMap;
 	private TiledMapRenderer tileMapRenderer;
 
-	// --- entities
+    // --- text
+    private Skin skin;
+    private Label message;
+    private TextArea debugOutput;
 
+	// --- entities
 	private Sprite hero;
 	private Sprite enemy;
 	private Label message;
@@ -125,7 +132,13 @@ public class Game extends ApplicationAdapter {
 
 	private void initUi() {
 		this.skin = new Skin(Gdx.files.internal("uiskin.json"));
-		this.message = new Label("xxx", this.skin);
+		this.message = new Label("", this.skin);
+        this.message.setX(0);
+        this.message.setY(viewportHeight-20);
+
+        this.debugOutput = new TextArea("", this.skin);
+        this.debugOutput.setX(viewportWidth-this.debugOutput.getWidth());
+        this.debugOutput.setY(50);
 	}
 
     // --------------------
@@ -159,6 +172,9 @@ public class Game extends ApplicationAdapter {
         else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             camera.translate(0, 1);
         }
+
+       debugOutput.setText("Camera:"+camera.position.x+"/"+camera.position.y);
+
     }
 
 	private void handleAI() {
@@ -187,6 +203,7 @@ public class Game extends ApplicationAdapter {
 
 	private void drawForeground(SpriteBatch batch) {
 		message.draw(batch, 0.5f);
+        debugOutput.draw(batch, 0.5f);
 	}
 
 	private TextureRegion[][] getSprites() {
