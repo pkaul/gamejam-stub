@@ -32,10 +32,13 @@ public class Game extends ApplicationAdapter {
     private static final int SPRITESHEET_ROWS = 16;
     private static final int SPRITESHEET_COLUMNS = 16;
 
-    private final int viewportWidth;
-    private final int viewportHeight;
+    // size the entire screen/world in pixels
     private int screenWidth;
     private int screenHeight;
+
+    // size of the viewport (fragment of the screen/world)
+    private final int viewportWidth;
+    private final int viewportHeight;
 
     private SpriteBatch foregroundBatch;
     private SpriteBatch worldBatch;
@@ -44,9 +47,11 @@ public class Game extends ApplicationAdapter {
     private OrthographicCamera camera;
 
     // --- background
-    private TiledMap tileMap;
-    private Vector2 tileMapWorldSize;
-    private Vector2 tileSize;
+    private TiledMap worldTilemap;
+    // size of world in pixels
+    private Vector2 worldSize;
+    // size of a world's tile in pixels
+    private Vector2 worldTileSize;
     private TiledMapRenderer tileMapRenderer;
 
     // --- text
@@ -86,7 +91,10 @@ public class Game extends ApplicationAdapter {
         //Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // processes user input
         handleInput();
+
+        // processes actor AI
         handleAI();
 
         // draw background / world
@@ -94,8 +102,9 @@ public class Game extends ApplicationAdapter {
         worldBatch.setProjectionMatrix(camera.combined);
         drawGround(camera);
 
+        // draw actors
         worldBatch.begin();
-        drawSprites(worldBatch);
+        drawActors(worldBatch);
         worldBatch.end();
 
         // draw foreground / text
@@ -109,17 +118,17 @@ public class Game extends ApplicationAdapter {
     public void resize(int width, int height) {
         this.screenHeight = height;
         this.screenWidth = width;
-        Gdx.app.log(LOGTAG, "Resized: " + width + "/" + height);
+        log("Resized: " + width + "/" + height);
     }
 
     @Override
     public void pause() {
-        Gdx.app.log(LOGTAG, "Paused");
+        log("Paused");
     }
 
     @Override
     public void resume() {
-        Gdx.app.log(LOGTAG, "Resumed");
+        log("Resumed");
     }
 
     // ==============
@@ -127,36 +136,33 @@ public class Game extends ApplicationAdapter {
     private void initActors() {
         this.sprites = getSprites();
 
+        // hero is composed from sprite 0/10
         this.hero = new Sprite(sprites[0][10]);
         // set hero to tile 1/1
-        this.hero.setX(tileSize.x*1);
-        this.hero.setY(tileMapWorldSize.y-tileSize.y*(1+1));
+        this.hero.setX(worldTileSize.x*1);
+        this.hero.setY(worldSize.y- worldTileSize.y*(1+1));
 
+        // enemy is composed from sprite 0/11
         this.enemy = new Sprite(sprites[0][11]);
         // set enemy to tile 2/2
-        this.enemy.setX(tileSize.x*2);
-        this.enemy.setY(tileMapWorldSize.y-tileSize.y*(2+1));
+        this.enemy.setX(worldTileSize.x*2);
+        this.enemy.setY(worldSize.y- worldTileSize.y*(2+1));
     }
 
     private void initWorld() {
 
         // Load tile map
         // Edit the tilemap using "Tiled Map" http://www.mapeditor.org/download.html
-        tileMap = new TmxMapLoader().load("world.tmx");
-        tileMapWorldSize = getWorldSize(tileMap);
-        tileSize = getTileSize(tileMap);
-        Gdx.app.log(LOGTAG, "Tilemap size: "+ tileMapWorldSize+", tile size: "+tileSize);
+        worldTilemap = new TmxMapLoader().load("world.tmx");
+        worldSize = getWorldSize(worldTilemap);
+        worldTileSize = getTileSize(worldTilemap);
+        Gdx.app.log(LOGTAG, "Tilemap size: "+ worldSize +", tile size: "+ worldTileSize);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, viewportWidth, viewportHeight);
+        setViewportWorldPosition(0, 0);
 
-        // set camera to upper/left corner of tilemap.
-        // Note: Camera's position is the _center_ of the viewport
-        camera.position.x = this.viewportWidth/2;
-        camera.position.y = tileMapWorldSize.y-this.viewportHeight/2;
-
-
-        tileMapRenderer = new OrthogonalTiledMapRenderer(tileMap);
+        tileMapRenderer = new OrthogonalTiledMapRenderer(worldTilemap);
         tileMapRenderer.setView(camera);
     }
 
@@ -175,18 +181,55 @@ public class Game extends ApplicationAdapter {
 
     private void handleInput() {
 
-        // movement of hero
+        // move hero
+        final int HERO_SPEED = 2;
+        int heroXOffset = 0;
+        int heroYOffset = 0;
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            hero.translateX(-1);
+            heroXOffset = -HERO_SPEED;
+            hero.translateX(-HERO_SPEED);
         } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            hero.translateX(1);
+            heroXOffset = HERO_SPEED;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            heroYOffset = -HERO_SPEED;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            heroYOffset = HERO_SPEED;
         }
 
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            hero.translateY(-1);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-            hero.translateY(1);
+        if( heroXOffset != 0 || heroYOffset != 0 ) {
+
+            // hero has moved
+            hero.translate(heroXOffset, heroYOffset);
+
+            // check if hero has reached border. if so: scroll background
+            int viewPortXOffset = 0;
+            int viewPortYOffset = 0;
+            final int VIEWPORT_MIN_DISTANCE = 64;
+            Vector2 heroViewPortPosition = getViewportPosition(hero);
+            if( heroViewPortPosition.x < VIEWPORT_MIN_DISTANCE ) {
+                viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.x);
+            }
+            else if( heroViewPortPosition.x > this.viewportWidth-VIEWPORT_MIN_DISTANCE) {
+                viewPortXOffset += (heroViewPortPosition.x-this.viewportWidth+VIEWPORT_MIN_DISTANCE);
+            }
+
+            // TODO fix
+//            if( heroViewPortPosition.y < VIEWPORT_MIN_DISTANCE ) {
+//                viewPortYOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.y);
+//            }
+            //else if( heroViewPortPosition.y > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
+            //    viewPortYOffset += (heroViewPortPosition.y-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
+            //}
+
+
+            if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
+                camera.translate(viewPortXOffset, viewPortYOffset);
+            }
         }
+
+
+
 
 
 //        final int VIEWPORT_DISTANCE = 50;
@@ -199,17 +242,26 @@ public class Game extends ApplicationAdapter {
         // check if hero has reached boundaries and whether camera should be moved as well
 
 
-        // movement of background
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            camera.translate(-1, 0);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            camera.translate(1, 0);
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            camera.translate(0, -1);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            camera.translate(0, 1);
-        }
+//        // movement of background
+//
+//        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+//            viewPortXOffset = -1;
+//        }
+//        else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+//            viewPortXOffset = 1;
+//        }
+//
+//        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+//            viewPortYOffset = -1;
+//        }
+//        else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+//            viewPortYOffset = 1;
+//        }
+//
+//        if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
+//            camera.translate(viewPortXOffset, viewPortYOffset);
+
+//        }
 
         debugOutput.setText("Camera:" + camera.position.x + "/" + camera.position.y + "\nHero: " + hero.getX() + "/" + hero.getY());
         debugOutput.invalidate();
@@ -228,12 +280,46 @@ public class Game extends ApplicationAdapter {
 
     // -----------------------
 
+    /**
+     * Sets position of the viewport in relation to upper/left corner of screen/world
+     */
+    private void setViewportWorldPosition(int x, int y) {
+
+        // set camera to upper/left corner of tilemap.
+        // Note: Camera's position is the _center_ of the viewport
+        this.camera.position.x = x+this.viewportWidth/2;
+        this.camera.position.y = this.worldSize.y-y-this.viewportHeight/2;
+    }
+
+    /**
+     * @return Position of the viewport in relation to upper/left corner of screen/world
+     */
+    private Vector2 getViewportWorldPosition() {
+        return new Vector2(this.camera.position.x - this.viewportWidth / 2, this.worldSize.y - this.viewportHeight / 2 - this.camera.position.y);
+    }
+
+    /**
+     * Sprite's position on the viewport
+     */
+    private Vector2 getViewportPosition(Sprite sprite) {
+        Vector2 viewPortPosition = getViewportWorldPosition();
+        return new Vector2(sprite.getX() - viewPortPosition.x, sprite.getY() - viewPortPosition.y);
+    }
+
+    /**
+     * Sprite's position in relation to world's upper/left corner
+     */
+    private Vector2 getWorldPosition(Sprite sprite) {
+       return new Vector2(sprite.getX(), this.worldSize.y-sprite.getY());
+    }
+
+
     private void drawGround(OrthographicCamera camera) {
         tileMapRenderer.setView(camera);
         tileMapRenderer.render();
     }
 
-    private void drawSprites(SpriteBatch batch) {
+    private void drawActors(SpriteBatch batch) {
 
         hero.draw(batch);
         enemy.draw(batch);
@@ -269,6 +355,10 @@ public class Game extends ApplicationAdapter {
         int tilePixelHeight = properties.get("tileheight", Integer.class);
 
         return new Vector2(tilePixelWidth, tilePixelHeight);
+    }
+
+    private void log(String message) {
+        Gdx.app.log(LOGTAG, message);
     }
 
 }
