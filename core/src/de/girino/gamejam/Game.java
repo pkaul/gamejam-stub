@@ -202,10 +202,11 @@ public class Game extends ApplicationAdapter {
             // hero has moved
             hero.translate(heroXOffset, heroYOffset);
 
-            // check if hero has reached border. if so: scroll background
+            // check if hero has reached viewport's border. if so: scroll background
             int viewPortXOffset = 0;
             int viewPortYOffset = 0;
             final int VIEWPORT_MIN_DISTANCE = 64;
+
             Vector2 heroViewPortPosition = getViewportPosition(hero);
             if( heroViewPortPosition.x < VIEWPORT_MIN_DISTANCE ) {
                 viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.x);
@@ -214,16 +215,15 @@ public class Game extends ApplicationAdapter {
                 viewPortXOffset += (heroViewPortPosition.x-this.viewportWidth+VIEWPORT_MIN_DISTANCE);
             }
 
-            // TODO fix
-//            if( heroViewPortPosition.y < VIEWPORT_MIN_DISTANCE ) {
-//                viewPortYOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.y);
-//            }
-            //else if( heroViewPortPosition.y > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
-            //    viewPortYOffset += (heroViewPortPosition.y-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
-            //}
-
+            if( heroViewPortPosition.y < VIEWPORT_MIN_DISTANCE ) {
+                viewPortYOffset += (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.y);
+            }
+            else if( heroViewPortPosition.y > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
+                viewPortYOffset -= (heroViewPortPosition.y-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
+            }
 
             if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
+                // scroll background
                 camera.translate(viewPortXOffset, viewPortYOffset);
             }
         }
@@ -303,7 +303,7 @@ public class Game extends ApplicationAdapter {
      */
     private Vector2 getViewportPosition(Sprite sprite) {
         Vector2 viewPortPosition = getViewportWorldPosition();
-        return new Vector2(sprite.getX() - viewPortPosition.x, sprite.getY() - viewPortPosition.y);
+        return new Vector2(sprite.getX() - viewPortPosition.x, worldSize.y - sprite.getY() - sprite.getHeight() - viewPortPosition.y );
     }
 
     /**
