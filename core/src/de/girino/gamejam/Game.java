@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Vector2;
@@ -80,7 +81,7 @@ public class Game extends ApplicationAdapter {
         initActors();
         initUi();
 
-        Gdx.app.log(LOGTAG, "Created");
+        log("Created");
     }
 
     @Override
@@ -134,13 +135,14 @@ public class Game extends ApplicationAdapter {
     // ==============
 
     private void initActors() {
-        this.sprites = getSprites();
+        this.sprites = loadSprites();
 
         // hero is composed from sprite 0/10
         this.hero = new Sprite(sprites[0][10]);
         // set hero to tile 1/1
         this.hero.setX(worldTileSize.x*1);
         this.hero.setY(worldSize.y- worldTileSize.y*(1+1));
+        moveHero(0,0); // init position in the world
 
         // enemy is composed from sprite 0/11
         this.enemy = new Sprite(sprites[0][11]);
@@ -156,7 +158,7 @@ public class Game extends ApplicationAdapter {
         worldTilemap = new TmxMapLoader().load("world.tmx");
         worldSize = getWorldSize(worldTilemap);
         worldTileSize = getTileSize(worldTilemap);
-        Gdx.app.log(LOGTAG, "Tilemap size: "+ worldSize +", tile size: "+ worldTileSize);
+        log("Tilemap size: " + worldSize + ", tile size: " + worldTileSize);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, viewportWidth, viewportHeight);
@@ -181,7 +183,7 @@ public class Game extends ApplicationAdapter {
 
     private void handleInput() {
 
-        // move hero
+        // --- move hero
         final int HERO_SPEED = 2;
         int heroXOffset = 0;
         int heroYOffset = 0;
@@ -198,74 +200,12 @@ public class Game extends ApplicationAdapter {
         }
 
         if( heroXOffset != 0 || heroYOffset != 0 ) {
-
-            // hero has moved
-            hero.translate(heroXOffset, heroYOffset);
-
-            // check if hero has reached viewport's border. if so: scroll background
-            int viewPortXOffset = 0;
-            int viewPortYOffset = 0;
-            final int VIEWPORT_MIN_DISTANCE = 64;
-
-            Vector2 heroViewPortPosition = getViewportPosition(hero);
-            if( heroViewPortPosition.x < VIEWPORT_MIN_DISTANCE ) {
-                viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.x);
-            }
-            else if( heroViewPortPosition.x > this.viewportWidth-VIEWPORT_MIN_DISTANCE) {
-                viewPortXOffset += (heroViewPortPosition.x-this.viewportWidth+VIEWPORT_MIN_DISTANCE);
-            }
-
-            if( heroViewPortPosition.y < VIEWPORT_MIN_DISTANCE ) {
-                viewPortYOffset += (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.y);
-            }
-            else if( heroViewPortPosition.y > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
-                viewPortYOffset -= (heroViewPortPosition.y-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
-            }
-
-            if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
-                // scroll background
-                camera.translate(viewPortXOffset, viewPortYOffset);
-            }
+            moveHero(heroXOffset, heroYOffset);
         }
 
 
-
-
-
-//        final int VIEWPORT_DISTANCE = 50;
-//
-//        if( hero.getY() > camera.position.y-VIEWPORT_DISTANCE ) {
-//            camera.translate(0, camera.position.y-hero.getY());
-//        }
-
-
-        // check if hero has reached boundaries and whether camera should be moved as well
-
-
-//        // movement of background
-//
-//        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-//            viewPortXOffset = -1;
-//        }
-//        else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-//            viewPortXOffset = 1;
-//        }
-//
-//        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-//            viewPortYOffset = -1;
-//        }
-//        else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-//            viewPortYOffset = 1;
-//        }
-//
-//        if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
-//            camera.translate(viewPortXOffset, viewPortYOffset);
-
-//        }
-
-        debugOutput.setText("Camera:" + camera.position.x + "/" + camera.position.y + "\nHero: " + hero.getX() + "/" + hero.getY());
+        debugOutput.setText("Hero: " + getWorldPosition(hero));
         debugOutput.invalidate();
-
     }
 
     private void handleAI() {
@@ -279,6 +219,46 @@ public class Game extends ApplicationAdapter {
 
 
     // -----------------------
+
+
+    /**
+     * Moves the hero relative to the current position
+     */
+    private void moveHero(int xoffset, int yoffset) {
+
+        // check if hero is allowed to move to this position (e.g. something in his way?)
+        Vector2 heroWorldPosition = getWorldPosition(hero);
+        getTileAt(heroWorldPosition.x+xoffset, heroWorldPosition.y+yoffset);
+
+
+        // move hero
+        hero.translate(xoffset, yoffset);
+
+        // check if hero has reached viewport's border. if so: scroll background
+        int viewPortXOffset = 0;
+        int viewPortYOffset = 0;
+        final int VIEWPORT_MIN_DISTANCE = 64;
+
+        Vector2 heroViewPortPosition = getViewportPosition(hero);
+        if( heroViewPortPosition.x < VIEWPORT_MIN_DISTANCE ) {
+            viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.x);
+        }
+        else if( heroViewPortPosition.x > this.viewportWidth-VIEWPORT_MIN_DISTANCE) {
+            viewPortXOffset += (heroViewPortPosition.x-this.viewportWidth+VIEWPORT_MIN_DISTANCE);
+        }
+
+        if( heroViewPortPosition.y < VIEWPORT_MIN_DISTANCE ) {
+            viewPortYOffset += (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.y);
+        }
+        else if( heroViewPortPosition.y > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
+            viewPortYOffset -= (heroViewPortPosition.y-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
+        }
+
+        if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
+            // scroll background
+            camera.translate(viewPortXOffset, viewPortYOffset);
+        }
+    }
 
     /**
      * Sets position of the viewport in relation to upper/left corner of screen/world
@@ -330,7 +310,7 @@ public class Game extends ApplicationAdapter {
         debugOutput.draw(batch, 0.5f);
     }
 
-    private TextureRegion[][] getSprites() {
+    private TextureRegion[][] loadSprites() {
         Texture spriteSheet = new Texture(Gdx.files.internal("spritesheet_example.png"));
         return TextureRegion.split(spriteSheet, spriteSheet.getWidth() / SPRITESHEET_COLUMNS, spriteSheet.getHeight() / SPRITESHEET_ROWS);
     }
@@ -355,6 +335,35 @@ public class Game extends ApplicationAdapter {
         int tilePixelHeight = properties.get("tileheight", Integer.class);
 
         return new Vector2(tilePixelWidth, tilePixelHeight);
+    }
+
+    /**
+     * The tile at a given position
+     * TODO finish implementation
+     */
+    private Object getTileAt(float x, float y) {
+
+
+        TiledMapTileLayer roadblocks = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer are the roadblocks
+        int tileXpos = Math.round(x / roadblocks.getTileWidth());
+        int tileYpos = Math.round(y / roadblocks.getHeight());
+
+//        if (tileXpos < 0 || tileXpos >= roadblocks.getWidth()) {
+//            // out of bounds
+//            return null;
+//        }
+//        if (tileYpos < 0 || tileYpos >= roadblocks.getHeight()) {
+//            // out of bounds
+//            return null;
+//        }
+
+        TiledMapTileLayer.Cell cell = roadblocks.getCell(tileXpos, tileYpos);
+        if( cell != null ) {
+
+            log("Cell "+cell);
+        }
+
+        return cell;
     }
 
     private void log(String message) {
