@@ -228,7 +228,9 @@ public class Game extends ApplicationAdapter {
 
         // check if hero is allowed to move to this position (e.g. something in his way?)
         Vector2 heroWorldPosition = getWorldPosition(hero);
-        getTileAt(heroWorldPosition.x+xoffset, heroWorldPosition.y+yoffset);
+        TiledMapTileLayer.Cell targetPositionGround = getGroundElementAt(heroWorldPosition.x + xoffset, heroWorldPosition.y + yoffset);
+        // TODO handle ground
+
 
 
         // move hero
@@ -338,32 +340,15 @@ public class Game extends ApplicationAdapter {
     }
 
     /**
-     * The tile at a given position
-     * TODO finish implementation
+     * ground tile at a given position or null if no roadblock
      */
-    private Object getTileAt(float x, float y) {
+    private TiledMapTileLayer.Cell getGroundElementAt(float x, float y) {
 
+        TiledMapTileLayer groundLayer = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer are the ground elements
+        int tileXpos = Math.round(x / groundLayer.getTileWidth());
+        int tileYpos = groundLayer.getWidth() - Math.round(y / groundLayer.getHeight());
 
-        TiledMapTileLayer roadblocks = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer are the roadblocks
-        int tileXpos = Math.round(x / roadblocks.getTileWidth());
-        int tileYpos = Math.round(y / roadblocks.getHeight());
-
-//        if (tileXpos < 0 || tileXpos >= roadblocks.getWidth()) {
-//            // out of bounds
-//            return null;
-//        }
-//        if (tileYpos < 0 || tileYpos >= roadblocks.getHeight()) {
-//            // out of bounds
-//            return null;
-//        }
-
-        TiledMapTileLayer.Cell cell = roadblocks.getCell(tileXpos, tileYpos);
-        if( cell != null ) {
-
-            log("Cell "+cell);
-        }
-
-        return cell;
+        return groundLayer.getCell(tileXpos, tileYpos);
     }
 
     private void log(String message) {
