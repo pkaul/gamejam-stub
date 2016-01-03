@@ -15,7 +15,6 @@ import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
@@ -245,10 +244,8 @@ public class Game extends ApplicationAdapter {
         TiledMapTileLayer.Cell targetPosObstacle = getObstacleElementAt(targetPosX, targetPosY);
         if( targetPosObstacle != null ) {
             // there is an obstacle at the target position. don't move
-
-
-
-            log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
+            // TODO fix
+            //log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
             //return;
         }
 
@@ -267,10 +264,6 @@ public class Game extends ApplicationAdapter {
         // position of hero in the viewport
         int heroViewportXPos = Math.round(hero.getX() - viewportXPos);
         int heroViewportYPos = Math.round(hero.getY() - viewportYPos);
-
-//        Vector2 viewPortPosition = getViewportWorldPosition();
-//        return new Vector2(sprite.getX() - viewPortPosition.x, this.worldHeight - sprite.getY() - sprite.getHeight() - viewPortPosition.y );
-//
 
 
         if( heroViewportXPos < VIEWPORT_MIN_DISTANCE ) {
@@ -313,14 +306,14 @@ public class Game extends ApplicationAdapter {
     private TextureRegion[][] loadSprites() {
         Texture spriteSheet = new Texture(Gdx.files.internal("spritesheet_example.png"));
         return TextureRegion.split(spriteSheet, spriteSheet.getWidth() / SPRITESHEET_COLUMNS, spriteSheet.getHeight() / SPRITESHEET_ROWS);
-    }
+   }
     /**
      * obstacle tile at a given position or null if no roadblock
      */
     private TiledMapTileLayer.Cell getObstacleElementAt(float x, float y) {
 
-        int tileXpos = Math.round(x / worldObstacleLayer.getTileWidth()) - 1;
-        int tileYpos = worldObstacleLayer.getWidth() - Math.round(y / worldObstacleLayer.getTileHeight()) - 1;
+        int tileXpos = Math.round(x / worldObstacleLayer.getTileWidth());
+        int tileYpos = Math.round(y / worldObstacleLayer.getTileHeight());
 
         return worldObstacleLayer.getCell(tileXpos, tileYpos);
     }
