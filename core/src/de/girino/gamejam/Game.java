@@ -168,7 +168,7 @@ public class Game extends ApplicationAdapter {
         this.worldWidth = this.tileWidth * tileMapProperties.get("width", Integer.class);
         this.worldHeight = this.tileHeight * tileMapProperties.get("height", Integer.class);
 
-        worldObstacleLayer = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer contains the obstacles
+        worldObstacleLayer = (TiledMapTileLayer) worldTilemap.getLayers().get("obstacles"); // fetch named layer
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, viewportWidth, viewportHeight);
@@ -201,7 +201,6 @@ public class Game extends ApplicationAdapter {
         int heroYOffset = 0;
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             heroXOffset = -HERO_SPEED;
-            hero.translateX(-HERO_SPEED);
         } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             heroXOffset = HERO_SPEED;
         }
@@ -245,8 +244,8 @@ public class Game extends ApplicationAdapter {
         if( targetPosObstacle != null ) {
             // there is an obstacle at the target position. don't move
             // TODO fix
-            //log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
-            //return;
+            log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
+            return;
         }
 
         // do hero movement
@@ -258,8 +257,8 @@ public class Game extends ApplicationAdapter {
         final int VIEWPORT_MIN_DISTANCE = 64;
 
         // position of the viewport in the world
-        int viewportXPos = Math.round(this.camera.position.x - this.viewportWidth / 2);
-        int viewportYPos = Math.round(this.camera.position.y - this.viewportHeight / 2);
+        float viewportXPos = this.camera.position.x - this.viewportWidth / 2;
+        float viewportYPos = this.camera.position.y - this.viewportHeight / 2;
 
         // position of hero in the viewport
         int heroViewportXPos = Math.round(hero.getX() - viewportXPos);
@@ -312,8 +311,8 @@ public class Game extends ApplicationAdapter {
      */
     private TiledMapTileLayer.Cell getObstacleElementAt(float x, float y) {
 
-        int tileXpos = Math.round(x / worldObstacleLayer.getTileWidth());
-        int tileYpos = Math.round(y / worldObstacleLayer.getTileHeight());
+        int tileXpos = (int) Math.floor(x / worldObstacleLayer.getTileWidth());
+        int tileYpos = (int) Math.floor(y / worldObstacleLayer.getTileHeight());
 
         return worldObstacleLayer.getCell(tileXpos, tileYpos);
     }
