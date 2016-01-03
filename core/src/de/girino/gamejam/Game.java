@@ -145,7 +145,7 @@ public class Game extends ApplicationAdapter {
 
         // hero is composed from sprite 0/10
         this.hero = new Sprite(sprites[0][10]);
-        // set hero to tile 1/1
+        // set hero to world's upper/left corner
         this.hero.setX(this.tileWidth*1);
         this.hero.setY(this.worldHeight - this.tileHeight*(1+1));
         moveHero(this.hero, 0,0); // init position in the world
@@ -169,15 +169,13 @@ public class Game extends ApplicationAdapter {
         this.worldWidth = this.tileWidth * tileMapProperties.get("width", Integer.class);
         this.worldHeight = this.tileHeight * tileMapProperties.get("height", Integer.class);
 
-
-
-
-
         worldObstacleLayer = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer contains the obstacles
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, viewportWidth, viewportHeight);
-        setViewportWorldPosition(0, 0);
+        // set camera to the upper/left corner of the world
+        camera.position.x = viewportWidth/2;
+        camera.position.y = worldHeight-viewportHeight/2;
 
         tileMapRenderer = new OrthogonalTiledMapRenderer(worldTilemap);
         tileMapRenderer.setView(camera);
@@ -219,7 +217,7 @@ public class Game extends ApplicationAdapter {
         }
 
 
-        debugOutput.setText("Hero: " + getWorldPosition(hero));
+        debugOutput.setText("Hero: " + hero.getX()+"/"+hero.getY());
         debugOutput.invalidate();
     }
 
@@ -241,12 +239,9 @@ public class Game extends ApplicationAdapter {
      */
     private void moveHero(Sprite hero, int xoffset, int yoffset) {
 
-
-        Vector2 heroWorldPosition = getWorldPosition(hero);
-
         // check if hero is allowed to move to this position (e.g. something in his way?)
-        float targetPosX = heroWorldPosition.x + xoffset + (xoffset > 0 ? hero.getWidth() : 0);
-        float targetPosY = heroWorldPosition.y + yoffset + (yoffset > 0 ? hero.getHeight() : 0);
+        float targetPosX = hero.getX() + xoffset + (xoffset > 0 ? hero.getWidth() : 0);
+        float targetPosY = hero.getY() + yoffset + (yoffset > 0 ? hero.getHeight() : 0);
         TiledMapTileLayer.Cell targetPosObstacle = getObstacleElementAt(targetPosX, targetPosY);
         if( targetPosObstacle != null ) {
             // there is an obstacle at the target position. don't move
@@ -265,58 +260,37 @@ public class Game extends ApplicationAdapter {
         int viewPortYOffset = 0;
         final int VIEWPORT_MIN_DISTANCE = 64;
 
-        Vector2 heroViewPortPosition = getViewportPosition(hero);
-        if( heroViewPortPosition.x < VIEWPORT_MIN_DISTANCE ) {
-            viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.x);
+        // position of the viewport in the world
+        int viewportXPos = Math.round(this.camera.position.x - this.viewportWidth / 2);
+        int viewportYPos = Math.round(this.camera.position.y - this.viewportHeight / 2);
+
+        // position of hero in the viewport
+        int heroViewportXPos = Math.round(hero.getX() - viewportXPos);
+        int heroViewportYPos = Math.round(hero.getY() - viewportYPos);
+
+//        Vector2 viewPortPosition = getViewportWorldPosition();
+//        return new Vector2(sprite.getX() - viewPortPosition.x, this.worldHeight - sprite.getY() - sprite.getHeight() - viewPortPosition.y );
+//
+
+
+        if( heroViewportXPos < VIEWPORT_MIN_DISTANCE ) {
+            viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewportXPos);
         }
-        else if( heroViewPortPosition.x > this.viewportWidth-VIEWPORT_MIN_DISTANCE) {
-            viewPortXOffset += (heroViewPortPosition.x-this.viewportWidth+VIEWPORT_MIN_DISTANCE);
+        else if( heroViewportXPos > this.viewportWidth-VIEWPORT_MIN_DISTANCE) {
+            viewPortXOffset += (heroViewportXPos-this.viewportWidth+VIEWPORT_MIN_DISTANCE);
         }
 
-        if( heroViewPortPosition.y < VIEWPORT_MIN_DISTANCE ) {
-            viewPortYOffset += (VIEWPORT_MIN_DISTANCE-heroViewPortPosition.y);
+        if( heroViewportYPos < VIEWPORT_MIN_DISTANCE ) {
+            viewPortYOffset -= (VIEWPORT_MIN_DISTANCE-heroViewportYPos);
         }
-        else if( heroViewPortPosition.y > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
-            viewPortYOffset -= (heroViewPortPosition.y-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
+        else if( heroViewportYPos > this.viewportHeight-VIEWPORT_MIN_DISTANCE) {
+            viewPortYOffset += (heroViewportYPos-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
         }
 
         if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
             // scroll background
             camera.translate(viewPortXOffset, viewPortYOffset);
         }
-    }
-
-    /**
-     * Sets position of the viewport in relation to upper/left corner of screen/world
-     */
-    private void setViewportWorldPosition(int x, int y) {
-
-        // set camera to upper/left corner of tilemap.
-        // Note: Camera's position is the _center_ of the viewport
-        this.camera.position.x = x+this.viewportWidth/2;
-        this.camera.position.y = this.worldHeight-y-this.viewportHeight/2;
-    }
-
-    /**
-     * @return Position of the viewport in relation to upper/left corner of screen/world
-     */
-    private Vector2 getViewportWorldPosition() {
-        return new Vector2(this.camera.position.x - this.viewportWidth / 2, this.worldHeight - this.viewportHeight / 2 - this.camera.position.y);
-    }
-
-    /**
-     * Sprite's position on the viewport
-     */
-    private Vector2 getViewportPosition(Sprite sprite) {
-        Vector2 viewPortPosition = getViewportWorldPosition();
-        return new Vector2(sprite.getX() - viewPortPosition.x, this.worldHeight - sprite.getY() - sprite.getHeight() - viewPortPosition.y );
-    }
-
-    /**
-     * Sprite's position in relation to world's upper/left corner
-     */
-    private Vector2 getWorldPosition(Sprite sprite) {
-       return new Vector2(sprite.getX(), this.worldHeight-sprite.getY()-sprite.getHeight());
     }
 
 
