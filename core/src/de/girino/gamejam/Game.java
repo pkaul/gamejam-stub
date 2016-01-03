@@ -50,10 +50,16 @@ public class Game extends ApplicationAdapter {
     // --- background
     private TiledMap worldTilemap;
     // size of world in pixels
-    private Vector2 worldSize;
+    private int worldWidth;
+    private int worldHeight;
     // size of a world's tile in pixels
-    private Vector2 worldTileSize;
+    private int tileWidth;
+    private int tileHeight;
     private TiledMapRenderer tileMapRenderer;
+
+    // The obstacles in the world
+    private TiledMapTileLayer worldObstacleLayer;
+
 
     // --- text
     private Skin skin;
@@ -140,15 +146,15 @@ public class Game extends ApplicationAdapter {
         // hero is composed from sprite 0/10
         this.hero = new Sprite(sprites[0][10]);
         // set hero to tile 1/1
-        this.hero.setX(worldTileSize.x*1);
-        this.hero.setY(worldSize.y- worldTileSize.y*(1+1));
-        moveHero(0,0); // init position in the world
+        this.hero.setX(this.tileWidth*1);
+        this.hero.setY(this.worldHeight - this.tileHeight*(1+1));
+        moveHero(this.hero, 0,0); // init position in the world
 
         // enemy is composed from sprite 0/11
         this.enemy = new Sprite(sprites[0][11]);
         // set enemy to tile 2/2
-        this.enemy.setX(worldTileSize.x*2);
-        this.enemy.setY(worldSize.y- worldTileSize.y*(2+1));
+        this.enemy.setX(this.tileWidth*2);
+        this.enemy.setY(this.worldHeight - this.tileHeight*(2+1));
     }
 
     private void initWorld() {
@@ -156,9 +162,18 @@ public class Game extends ApplicationAdapter {
         // Load tile map
         // Edit the tilemap using "Tiled Map" http://www.mapeditor.org/download.html
         worldTilemap = new TmxMapLoader().load("world.tmx");
-        worldSize = getWorldSize(worldTilemap);
-        worldTileSize = getTileSize(worldTilemap);
-        log("Tilemap size: " + worldSize + ", tile size: " + worldTileSize);
+
+        MapProperties tileMapProperties = worldTilemap.getProperties();
+        this.tileWidth = tileMapProperties.get("tilewidth", Integer.class);
+        this.tileHeight = tileMapProperties.get("tileheight", Integer.class);
+        this.worldWidth = this.tileWidth * tileMapProperties.get("width", Integer.class);
+        this.worldHeight = this.tileHeight * tileMapProperties.get("height", Integer.class);
+
+
+
+
+
+        worldObstacleLayer = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer contains the obstacles
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, viewportWidth, viewportHeight);
@@ -200,7 +215,7 @@ public class Game extends ApplicationAdapter {
         }
 
         if( heroXOffset != 0 || heroYOffset != 0 ) {
-            moveHero(heroXOffset, heroYOffset);
+            moveHero(hero, heroXOffset, heroYOffset);
         }
 
 
@@ -224,16 +239,25 @@ public class Game extends ApplicationAdapter {
     /**
      * Moves the hero relative to the current position
      */
-    private void moveHero(int xoffset, int yoffset) {
+    private void moveHero(Sprite hero, int xoffset, int yoffset) {
+
+
+        Vector2 heroWorldPosition = getWorldPosition(hero);
 
         // check if hero is allowed to move to this position (e.g. something in his way?)
-        Vector2 heroWorldPosition = getWorldPosition(hero);
-        TiledMapTileLayer.Cell targetPositionGround = getGroundElementAt(heroWorldPosition.x + xoffset, heroWorldPosition.y + yoffset);
-        // TODO handle ground
+        float targetPosX = heroWorldPosition.x + xoffset + (xoffset > 0 ? hero.getWidth() : 0);
+        float targetPosY = heroWorldPosition.y + yoffset + (yoffset > 0 ? hero.getHeight() : 0);
+        TiledMapTileLayer.Cell targetPosObstacle = getObstacleElementAt(targetPosX, targetPosY);
+        if( targetPosObstacle != null ) {
+            // there is an obstacle at the target position. don't move
 
 
 
-        // move hero
+            log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
+            //return;
+        }
+
+        // do hero movement
         hero.translate(xoffset, yoffset);
 
         // check if hero has reached viewport's border. if so: scroll background
@@ -270,14 +294,14 @@ public class Game extends ApplicationAdapter {
         // set camera to upper/left corner of tilemap.
         // Note: Camera's position is the _center_ of the viewport
         this.camera.position.x = x+this.viewportWidth/2;
-        this.camera.position.y = this.worldSize.y-y-this.viewportHeight/2;
+        this.camera.position.y = this.worldHeight-y-this.viewportHeight/2;
     }
 
     /**
      * @return Position of the viewport in relation to upper/left corner of screen/world
      */
     private Vector2 getViewportWorldPosition() {
-        return new Vector2(this.camera.position.x - this.viewportWidth / 2, this.worldSize.y - this.viewportHeight / 2 - this.camera.position.y);
+        return new Vector2(this.camera.position.x - this.viewportWidth / 2, this.worldHeight - this.viewportHeight / 2 - this.camera.position.y);
     }
 
     /**
@@ -285,14 +309,14 @@ public class Game extends ApplicationAdapter {
      */
     private Vector2 getViewportPosition(Sprite sprite) {
         Vector2 viewPortPosition = getViewportWorldPosition();
-        return new Vector2(sprite.getX() - viewPortPosition.x, worldSize.y - sprite.getY() - sprite.getHeight() - viewPortPosition.y );
+        return new Vector2(sprite.getX() - viewPortPosition.x, this.worldHeight - sprite.getY() - sprite.getHeight() - viewPortPosition.y );
     }
 
     /**
      * Sprite's position in relation to world's upper/left corner
      */
     private Vector2 getWorldPosition(Sprite sprite) {
-       return new Vector2(sprite.getX(), this.worldSize.y-sprite.getY());
+       return new Vector2(sprite.getX(), this.worldHeight-sprite.getY()-sprite.getHeight());
     }
 
 
@@ -316,39 +340,15 @@ public class Game extends ApplicationAdapter {
         Texture spriteSheet = new Texture(Gdx.files.internal("spritesheet_example.png"));
         return TextureRegion.split(spriteSheet, spriteSheet.getWidth() / SPRITESHEET_COLUMNS, spriteSheet.getHeight() / SPRITESHEET_ROWS);
     }
-
-    private static Vector2 getWorldSize(TiledMap tiledMap) {
-
-        MapProperties properties = tiledMap.getProperties();
-
-        int mapWidth = properties.get("width", Integer.class);
-        int mapHeight = properties.get("height", Integer.class);
-        int tilePixelWidth = properties.get("tilewidth", Integer.class);
-        int tilePixelHeight = properties.get("tileheight", Integer.class);
-
-        return new Vector2(mapWidth*tilePixelWidth, mapHeight*tilePixelHeight);
-    }
-
-    private static Vector2 getTileSize(TiledMap tiledMap) {
-
-        MapProperties properties = tiledMap.getProperties();
-
-        int tilePixelWidth = properties.get("tilewidth", Integer.class);
-        int tilePixelHeight = properties.get("tileheight", Integer.class);
-
-        return new Vector2(tilePixelWidth, tilePixelHeight);
-    }
-
     /**
-     * ground tile at a given position or null if no roadblock
+     * obstacle tile at a given position or null if no roadblock
      */
-    private TiledMapTileLayer.Cell getGroundElementAt(float x, float y) {
+    private TiledMapTileLayer.Cell getObstacleElementAt(float x, float y) {
 
-        TiledMapTileLayer groundLayer = (TiledMapTileLayer) worldTilemap.getLayers().get(0); // assumption: tilemap's first layer are the ground elements
-        int tileXpos = Math.round(x / groundLayer.getTileWidth());
-        int tileYpos = groundLayer.getWidth() - Math.round(y / groundLayer.getHeight());
+        int tileXpos = Math.round(x / worldObstacleLayer.getTileWidth()) - 1;
+        int tileYpos = worldObstacleLayer.getWidth() - Math.round(y / worldObstacleLayer.getTileHeight()) - 1;
 
-        return groundLayer.getCell(tileXpos, tileYpos);
+        return worldObstacleLayer.getCell(tileXpos, tileYpos);
     }
 
     private void log(String message) {
