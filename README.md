@@ -21,11 +21,16 @@ When using Intellij (see https://github.com/libgdx/libgdx/wiki/Gradle-and-Intell
 Extend the game
 -----
 
-Use 
+Edit Java class 
 
-	de.girino.gamejam.Game
+	core/src/de/girino/gamejam/Game.java
 	
-as an entry point.
+Edit world file
+
+	android/assets/world.tmx
+
+using editor "Tiled Map" (http://www.mapeditor.org/download.html)
+
 
 
 Resources
