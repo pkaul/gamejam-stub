@@ -27,7 +27,7 @@ Edit Java class
 	
 Edit world file
 
-	android/assets/world.tmx
+	core/assets/world.tmx
 
 using editor "Tiled Map" (http://www.mapeditor.org/download.html)
 
