@@ -1,5 +1,7 @@
 package de.girino.gamejam;
 
+import apple.laf.JRSUIConstants;
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -12,7 +14,6 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
-import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
@@ -26,6 +27,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
  * GameJam Game
  */
 public class Game extends ApplicationAdapter {
+
+
 
     private static final String LOGTAG = "GameJam";
 
@@ -44,7 +47,6 @@ public class Game extends ApplicationAdapter {
 
     private SpriteBatch foregroundBatch;
     private SpriteBatch worldBatch;
-    private TextureRegion[][] sprites;
 
     private OrthographicCamera camera;
 
@@ -83,9 +85,10 @@ public class Game extends ApplicationAdapter {
     private Label message;
     private TextArea debugOutput;
 
-    // --- entities
-    private Sprite hero;
-    private Sprite enemy;
+    // --- actors
+    private Player player1;
+    private Player player2;
+
 
     private long tickCount = 0;
 
@@ -162,24 +165,25 @@ public class Game extends ApplicationAdapter {
     // ==============
 
     private void initActors() {
-        this.sprites = loadSprites();
 
         int firstGid = charactersTileSet.getProperties().get("firstgid", Integer.class);
         int tilesWidth = charactersTileSet.getProperties().get("imagewidth", Integer.class) / (charactersTileSet.getProperties().get("tilewidth", Integer.class)+charactersTileSet.getProperties().get("spacing", Integer.class));
 
+        // player1
+        this.player1 = new Player();
+        this.player1.sprite = new Sprite(charactersTileSet.getTile(firstGid+5*tilesWidth+1).getTextureRegion());
+        this.player1.sprite.setX(this.tileWidth * 1);
+        this.player1.sprite.setY(this.worldHeight - this.tileHeight * (1 + 1));
+        this.player1.direction = Player.DIRECTION_RIGHT;
 
-        // hero
-        this.hero = new Sprite(charactersTileSet.getTile(firstGid).getTextureRegion());
-        // set hero to world's upper/left corner
-        this.hero.setX(this.tileWidth*1);
-        this.hero.setY(this.worldHeight - this.tileHeight*(1+1));
-        moveHero(this.hero, 0,0); // init position in the world
+        // player2
+        this.player2 = new Player();
+        this.player2.sprite = new Sprite(charactersTileSet.getTile(firstGid+6*tilesWidth+1).getTextureRegion());
+        this.player2.sprite.setX(this.tileWidth * 2);
+        this.player2.sprite.setY(this.worldHeight - this.tileHeight * (2 + 1));
+        this.player2.direction = Player.DIRECTION_LEFT;
 
-        // enemy
-        this.enemy = new Sprite(charactersTileSet.getTile(firstGid+6*tilesWidth+1).getTextureRegion());
-        // set enemy to tile 2/2
-        this.enemy.setX(this.tileWidth*2);
-        this.enemy.setY(this.worldHeight - this.tileHeight*(2+1));
+        movePlayer(this.player1, 0, 0, this.player2); // init position in the world
     }
 
     private void initWorld() {
@@ -239,88 +243,144 @@ public class Game extends ApplicationAdapter {
 
     private void handleInput() {
 
-        // --- move hero
-        if( tickCount % 4 == 0 ) {
 
 
-            final int HERO_SPEED = 16;
-            int heroXOffset = 0;
-            int heroYOffset = 0;
-            if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-                heroXOffset = -HERO_SPEED;
-            } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-                heroXOffset = HERO_SPEED;
-            }
-            if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-                heroYOffset = -HERO_SPEED;
-            } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-                heroYOffset = HERO_SPEED;
-            }
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            player1.direction = Player.DIRECTION_LEFT;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            player1.direction = Player.DIRECTION_RIGHT;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            player1.direction = Player.DIRECTION_DOWN;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            player1.direction = Player.DIRECTION_UP;
+        }
 
-            if (heroXOffset != 0 || heroYOffset != 0) {
-                moveHero(hero, heroXOffset, heroYOffset);
-            }
-
-            if( Gdx.input.isKeyPressed(Input.Keys.SPACE) ) {
-
-                int tileXpos = (int) Math.floor(hero.getX() / constructionLayer.getTileWidth());
-                int tileYpos = (int) Math.floor(hero.getY() / constructionLayer.getTileHeight());
-                constructionLayer.setCell(tileXpos, tileYpos, trackLeftRight);
-            }
-
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            player2.direction = Player.DIRECTION_LEFT;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            player2.direction = Player.DIRECTION_RIGHT;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            player2.direction = Player.DIRECTION_DOWN;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            player2.direction = Player.DIRECTION_UP;
         }
 
 
-        debugOutput.setText("Hero: " + hero.getX()+"/"+hero.getY());
+            /*
+            if( Gdx.input.isKeyPressed(Input.Keys.SPACE) ) {
+
+                int tileXpos = (int) Math.floor(player1.getX() / constructionLayer.getTileWidth());
+                int tileYpos = (int) Math.floor(player1.getY() / constructionLayer.getTileHeight());
+
+
+
+                constructionLayer.setCell(tileXpos, tileYpos, trackLeftRight);
+            }
+            */
+
+
+
+        movePlayer(player1, player2);
+        movePlayer(player2, player1);
+
+
+
+
+        //debugOutput.setText("Hero: " + player1.getX() + "/" + player1.getY());
         debugOutput.invalidate();
     }
 
     private void handleAI() {
 
-        if (enemy.getBoundingRectangle().overlaps(hero.getBoundingRectangle())) {
+        /*
+        if (player2.getBoundingRectangle().overlaps(player1.getBoundingRectangle())) {
             this.message.setText("Ooops!");
         } else {
             this.message.setText("");
         }
+        */
     }
 
 
     // -----------------------
 
+    private void movePlayer(Player player, Player other) {
+
+        if( tickCount % 4 == 0 ) {
+
+            final int HERO_SPEED = 16;
+            switch (player.direction) {
+                case Player.DIRECTION_RIGHT:
+                    movePlayer(player, HERO_SPEED, 0, other);
+                    break;
+                case Player.DIRECTION_LEFT:
+                    movePlayer(player, -HERO_SPEED, 0, other);
+                    break;
+                case Player.DIRECTION_DOWN:
+                    movePlayer(player, 0, -HERO_SPEED, other);
+                    break;
+                case Player.DIRECTION_UP:
+                    movePlayer(player, 0, HERO_SPEED, other);
+                    break;
+            }
+        }
+
+    }
 
     /**
-     * Moves the hero relative to the current position
+     * Moves the player relative to the current position
      */
-    private void moveHero(Sprite hero, int xoffset, int yoffset) {
+    private void movePlayer(Player player, int xoffset, int yoffset, Player other) {
 
-        // check if hero is allowed to move to this position (e.g. something in his way?)
-        float targetPosX = hero.getX() + xoffset + (xoffset > 0 ? hero.getWidth() : 0);
-        float targetPosY = hero.getY() + yoffset + (yoffset > 0 ? hero.getHeight() : 0);
+        // check if player1 is allowed to move to this position (e.g. something in his way?)
+        float targetPosX = player.sprite.getX() + xoffset + (xoffset > 0 ? player.sprite.getWidth() : 0);
+        float targetPosY = player.sprite.getY() + yoffset + (yoffset > 0 ? player.sprite.getHeight() : 0);
         TiledMapTileLayer.Cell targetPosObstacle = getObstacleElementAt(targetPosX, targetPosY);
         if( targetPosObstacle != null ) {
-            // there is an obstacle at the target position. don't move
-            // TODO fix
-            log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
+            // there is an obstacle at the target position.
+            //log("Obstacle at " + targetPosX + "/" + targetPosY + " is: " + targetPosObstacle.getTile().getId());
+            player.reverseDirection();
             return;
         }
 
-        // do hero movement
-        hero.translate(xoffset, yoffset);
 
-        // check if hero has reached viewport's border. if so: scroll background
-        int viewPortXOffset = 0;
-        int viewPortYOffset = 0;
+        int[] player1ScrollOffset = scrollViewPortForActorOffset(Math.round(player.sprite.getX() + xoffset), Math.round(player.sprite.getY() + yoffset), 0, 0);
+        int[] otherPlayerScrollOffset = scrollViewPortForActorOffset(Math.round(other.sprite.getX()), Math.round(other.sprite.getY()), player1ScrollOffset[0], player1ScrollOffset[1]);
+
+
+
+        if( otherPlayerScrollOffset[0] != 0 || otherPlayerScrollOffset[1] != 0 ) {
+            player.reverseDirection();
+            return;
+        }
+
+
+
+
+        // do  movement
+        player.sprite.translate(xoffset, yoffset);
+        if (player1ScrollOffset[0] != 0 || player1ScrollOffset[1] != 0 ) {
+            // do background scrolling
+            camera.translate(player1ScrollOffset[0], player1ScrollOffset[1]);
+        }
+    }
+
+    private int[] scrollViewPortForActorOffset(int actorX, int actorY, int cameraOffsetX, int cameraOffsetY) {
+
+
         final int VIEWPORT_MIN_DISTANCE = 64;
 
         // position of the viewport in the world
-        float viewportXPos = this.camera.position.x - this.viewportWidth / 2;
-        float viewportYPos = this.camera.position.y - this.viewportHeight / 2;
+        float viewportXPos = this.camera.position.x - this.viewportWidth / 2 + cameraOffsetX;
+        float viewportYPos = this.camera.position.y - this.viewportHeight / 2 + cameraOffsetY;
 
-        // position of hero in the viewport
-        int heroViewportXPos = Math.round(hero.getX() - viewportXPos);
-        int heroViewportYPos = Math.round(hero.getY() - viewportYPos);
+        // future position of player in the viewport
+        int heroViewportXPos = Math.round(actorX - viewportXPos);
+        int heroViewportYPos = Math.round(actorY - viewportYPos);
 
 
+        int viewPortXOffset = 0;
+        int viewPortYOffset = 0;
         if( heroViewportXPos < VIEWPORT_MIN_DISTANCE ) {
             viewPortXOffset -= (VIEWPORT_MIN_DISTANCE-heroViewportXPos);
         }
@@ -335,10 +395,8 @@ public class Game extends ApplicationAdapter {
             viewPortYOffset += (heroViewportYPos-this.viewportHeight+VIEWPORT_MIN_DISTANCE);
         }
 
-        if (viewPortXOffset != 0 || viewPortYOffset != 0 ) {
-            // scroll background
-            camera.translate(viewPortXOffset, viewPortYOffset);
-        }
+        return new int[] {viewPortXOffset, viewPortYOffset};
+
     }
 
 
@@ -349,8 +407,8 @@ public class Game extends ApplicationAdapter {
 
     private void drawActors(SpriteBatch batch) {
 
-        hero.draw(batch);
-        enemy.draw(batch);
+        player1.sprite.draw(batch);
+        player2.sprite.draw(batch);
     }
 
     private void drawForeground(SpriteBatch batch) {
@@ -358,10 +416,6 @@ public class Game extends ApplicationAdapter {
         debugOutput.draw(batch, 0.5f);
     }
 
-    private TextureRegion[][] loadSprites() {
-        Texture spriteSheet = new Texture(Gdx.files.internal("roguelikeChar_transparent.png"));
-        return TextureRegion.split(spriteSheet, spriteSheet.getWidth() / SPRITESHEET_COLUMNS, spriteSheet.getHeight() / SPRITESHEET_ROWS);
-   }
     /**
      * obstacle tile at a given position or null if no roadblock
      */
