@@ -160,7 +160,7 @@ public class Game extends ApplicationAdapter {
 
         // Load tile map
         // Edit the tilemap using "Tiled Map" http://www.mapeditor.org/download.html
-        worldTilemap = new TmxMapLoader().load("world.tmx");
+        worldTilemap = new TmxMapLoader().load("world2.tmx");
 
         MapProperties tileMapProperties = worldTilemap.getProperties();
         this.tileWidth = tileMapProperties.get("tilewidth", Integer.class);
