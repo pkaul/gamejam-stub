@@ -12,7 +12,9 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapProperties;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
+import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -56,8 +58,24 @@ public class Game extends ApplicationAdapter {
     private int tileHeight;
     private TiledMapRenderer tileMapRenderer;
 
+    // --- characters
+    private TiledMapTileSet charactersTileSet;
+
     // The obstacles in the world
     private TiledMapTileLayer worldObstacleLayer;
+
+    private TiledMapTileLayer constructionLayer;
+    private TiledMapTileLayer.Cell trackRightBottom;
+    private TiledMapTileLayer.Cell  trackLeftBottom;
+    private TiledMapTileLayer.Cell  trackRightTop;
+    private TiledMapTileLayer.Cell  trackLeftTop;
+    private TiledMapTileLayer.Cell  trackLeftRight;
+    private TiledMapTileLayer.Cell  trackTopBottom;
+    private TiledMapTileLayer.Cell  trackRight;
+    private TiledMapTileLayer.Cell  trackLeft;
+    private TiledMapTileLayer.Cell  trackBottom;
+    private TiledMapTileLayer.Cell  trackTop;
+
 
 
     // --- text
@@ -68,6 +86,8 @@ public class Game extends ApplicationAdapter {
     // --- entities
     private Sprite hero;
     private Sprite enemy;
+
+    private long tickCount = 0;
 
     public Game(int viewportWidth, int viewportHeight) {
 
@@ -91,6 +111,8 @@ public class Game extends ApplicationAdapter {
 
     @Override
     public void render() {
+
+        tickCount++;
 
         // reset last frame
         Gdx.gl.glClearColor(0.5f, 0.5f, 0.5f, 1);
@@ -142,15 +164,19 @@ public class Game extends ApplicationAdapter {
     private void initActors() {
         this.sprites = loadSprites();
 
-        // hero is composed from sprite 0/10
-        this.hero = new Sprite(sprites[0][10]);
+        int firstGid = charactersTileSet.getProperties().get("firstgid", Integer.class);
+        int tilesWidth = charactersTileSet.getProperties().get("imagewidth", Integer.class) / (charactersTileSet.getProperties().get("tilewidth", Integer.class)+charactersTileSet.getProperties().get("spacing", Integer.class));
+
+
+        // hero
+        this.hero = new Sprite(charactersTileSet.getTile(firstGid).getTextureRegion());
         // set hero to world's upper/left corner
         this.hero.setX(this.tileWidth*1);
         this.hero.setY(this.worldHeight - this.tileHeight*(1+1));
         moveHero(this.hero, 0,0); // init position in the world
 
-        // enemy is composed from sprite 0/11
-        this.enemy = new Sprite(sprites[0][11]);
+        // enemy
+        this.enemy = new Sprite(charactersTileSet.getTile(firstGid+6*tilesWidth+1).getTextureRegion());
         // set enemy to tile 2/2
         this.enemy.setX(this.tileWidth*2);
         this.enemy.setY(this.worldHeight - this.tileHeight*(2+1));
@@ -169,6 +195,24 @@ public class Game extends ApplicationAdapter {
         this.worldHeight = this.tileHeight * tileMapProperties.get("height", Integer.class);
 
         worldObstacleLayer = (TiledMapTileLayer) worldTilemap.getLayers().get("obstacles"); // fetch named layer
+        constructionLayer = (TiledMapTileLayer) worldTilemap.getLayers().get("construction");
+
+
+        TiledMapTileLayer utilLayer = (TiledMapTileLayer) worldTilemap.getLayers().get("util");
+        trackRightBottom =  utilLayer.getCell(0, utilLayer.getHeight()-1);
+        trackLeftBottom =  utilLayer.getCell(1, utilLayer.getHeight()-1);
+        trackRightTop =  utilLayer.getCell(2, utilLayer.getHeight()-1);
+        trackLeftTop =  utilLayer.getCell(3, utilLayer.getHeight()-1);
+        trackLeftRight =  utilLayer.getCell(4, utilLayer.getHeight() - 1);
+        trackTopBottom =  utilLayer.getCell(5, utilLayer.getHeight() - 1);
+        trackRight =  utilLayer.getCell(6, utilLayer.getHeight() - 1);
+        trackLeft =  utilLayer.getCell(7, utilLayer.getHeight() - 1);
+        trackBottom =  utilLayer.getCell(8, utilLayer.getHeight() - 1);
+        trackTop =  utilLayer.getCell(9, utilLayer.getHeight() - 1);
+
+
+        charactersTileSet = worldTilemap.getTileSets().getTileSet("characters");
+
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, viewportWidth, viewportHeight);
@@ -196,22 +240,34 @@ public class Game extends ApplicationAdapter {
     private void handleInput() {
 
         // --- move hero
-        final int HERO_SPEED = 2;
-        int heroXOffset = 0;
-        int heroYOffset = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            heroXOffset = -HERO_SPEED;
-        } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            heroXOffset = HERO_SPEED;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            heroYOffset = -HERO_SPEED;
-        } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-            heroYOffset = HERO_SPEED;
-        }
+        if( tickCount % 4 == 0 ) {
 
-        if( heroXOffset != 0 || heroYOffset != 0 ) {
-            moveHero(hero, heroXOffset, heroYOffset);
+
+            final int HERO_SPEED = 16;
+            int heroXOffset = 0;
+            int heroYOffset = 0;
+            if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+                heroXOffset = -HERO_SPEED;
+            } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+                heroXOffset = HERO_SPEED;
+            }
+            if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+                heroYOffset = -HERO_SPEED;
+            } else if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+                heroYOffset = HERO_SPEED;
+            }
+
+            if (heroXOffset != 0 || heroYOffset != 0) {
+                moveHero(hero, heroXOffset, heroYOffset);
+            }
+
+            if( Gdx.input.isKeyPressed(Input.Keys.SPACE) ) {
+
+                int tileXpos = (int) Math.floor(hero.getX() / constructionLayer.getTileWidth());
+                int tileYpos = (int) Math.floor(hero.getY() / constructionLayer.getTileHeight());
+                constructionLayer.setCell(tileXpos, tileYpos, trackLeftRight);
+            }
+
         }
 
 
@@ -303,7 +359,7 @@ public class Game extends ApplicationAdapter {
     }
 
     private TextureRegion[][] loadSprites() {
-        Texture spriteSheet = new Texture(Gdx.files.internal("spritesheet_example.png"));
+        Texture spriteSheet = new Texture(Gdx.files.internal("roguelikeChar_transparent.png"));
         return TextureRegion.split(spriteSheet, spriteSheet.getWidth() / SPRITESHEET_COLUMNS, spriteSheet.getHeight() / SPRITESHEET_ROWS);
    }
     /**
