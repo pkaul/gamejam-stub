@@ -67,6 +67,7 @@ public class Game extends ApplicationAdapter {
     private TiledMapTileLayer worldObstacleLayer;
 
     private TiledMapTileLayer constructionLayer;
+    /*
     private TiledMapTileLayer.Cell trackRightBottom;
     private TiledMapTileLayer.Cell  trackLeftBottom;
     private TiledMapTileLayer.Cell  trackRightTop;
@@ -77,13 +78,17 @@ public class Game extends ApplicationAdapter {
     private TiledMapTileLayer.Cell  trackLeft;
     private TiledMapTileLayer.Cell  trackBottom;
     private TiledMapTileLayer.Cell  trackTop;
-
+    */
+    private TiledMapTileLayer.Cell  fire;
 
 
     // --- text
     private Skin skin;
     private Label message;
-    private TextArea debugOutput;
+    //^private TextArea debugOutput;
+
+    private TextArea player1Status;
+    private TextArea player2Status;
 
     // --- actors
     private Player player1;
@@ -107,6 +112,7 @@ public class Game extends ApplicationAdapter {
 
         initWorld();
         initActors();
+        initConstruction();
         initUi();
 
         log("Created");
@@ -186,6 +192,15 @@ public class Game extends ApplicationAdapter {
         movePlayer(this.player1, 0, 0, this.player2); // init position in the world
     }
 
+    private void initConstruction() {
+        for (int y=0; y<this.constructionLayer.getHeight(); y++ ) {
+            for (int x=0; x<this.constructionLayer.getWidth(); x++ ) {
+                this.constructionLayer.setCell(x,y, null);
+            }
+        }
+    }
+
+
     private void initWorld() {
 
         // Load tile map
@@ -203,6 +218,7 @@ public class Game extends ApplicationAdapter {
 
 
         TiledMapTileLayer utilLayer = (TiledMapTileLayer) worldTilemap.getLayers().get("util");
+        /*
         trackRightBottom =  utilLayer.getCell(0, utilLayer.getHeight()-1);
         trackLeftBottom =  utilLayer.getCell(1, utilLayer.getHeight()-1);
         trackRightTop =  utilLayer.getCell(2, utilLayer.getHeight()-1);
@@ -213,7 +229,8 @@ public class Game extends ApplicationAdapter {
         trackLeft =  utilLayer.getCell(7, utilLayer.getHeight() - 1);
         trackBottom =  utilLayer.getCell(8, utilLayer.getHeight() - 1);
         trackTop =  utilLayer.getCell(9, utilLayer.getHeight() - 1);
-
+        */
+        fire =  utilLayer.getCell(10, utilLayer.getHeight() - 1);
 
         charactersTileSet = worldTilemap.getTileSets().getTileSet("characters");
 
@@ -234,15 +251,38 @@ public class Game extends ApplicationAdapter {
         this.message.setX(0);
         this.message.setY(viewportHeight - 20);
 
-        this.debugOutput = new TextArea("", this.skin);
-        this.debugOutput.setX(0);
-        this.debugOutput.setY(50);
+        this.player1Status = new TextArea("", this.skin);
+        this.player1Status.setX(0);
+        this.player1Status.setY(30);
+        this.player1Status.setWidth(300);
+
+        this.player2Status = new TextArea("", this.skin);
+        this.player2Status.setX(400);
+        this.player2Status.setY(30);
+        this.player2Status.setWidth(300);
+
+
+
+        //this.debugOutput = new TextArea("", this.skin);
+        //this.debugOutput.setX(0);
+        //this.debugOutput.setY(50);
     }
 
     // --------------------
 
     private void handleInput() {
 
+        if( player1.health == 0 || player2.health == 0) {
+
+            // game is over!
+            if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+
+                initConstruction();
+                initActors();
+            }
+
+            return;
+        }
 
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
@@ -255,6 +295,14 @@ public class Game extends ApplicationAdapter {
             player1.direction = Player.DIRECTION_UP;
         }
 
+        if( Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT) && player1.energy > Player.FIRE_ENERGY ) {
+            int tileXpos = (int) Math.floor(player1.sprite.getX() / constructionLayer.getTileWidth());
+            int tileYpos = (int) Math.floor(player1.sprite.getY() / constructionLayer.getTileHeight());
+            constructionLayer.setCell(tileXpos, tileYpos, fire);
+            player1.energy -= Player.FIRE_ENERGY;
+        }
+
+
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             player2.direction = Player.DIRECTION_LEFT;
         } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
@@ -264,6 +312,16 @@ public class Game extends ApplicationAdapter {
         } else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             player2.direction = Player.DIRECTION_UP;
         }
+
+        if( Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) && player2.energy > Player.FIRE_ENERGY ) {
+            int tileXpos = (int) Math.floor(player2.sprite.getX() / constructionLayer.getTileWidth());
+            int tileYpos = (int) Math.floor(player2.sprite.getY() / constructionLayer.getTileHeight());
+            constructionLayer.setCell(tileXpos, tileYpos, fire);
+            player2.energy -= Player.FIRE_ENERGY;
+        }
+
+
+
 
 
             /*
@@ -284,10 +342,12 @@ public class Game extends ApplicationAdapter {
         movePlayer(player2, player1);
 
 
+        player1Status.setText("Health: "+player1.health+" Energy: "+player1.energy);
+        player2Status.setText("Health: "+player2.health+" Energy: "+player2.energy);
 
 
-        //debugOutput.setText("Hero: " + player1.getX() + "/" + player1.getY());
-        debugOutput.invalidate();
+        //debugOutput.setText("Health P1: " + player1.health + "  P2: " + player2.health);
+        //debugOutput.invalidate();
     }
 
     private void handleAI() {
@@ -299,6 +359,21 @@ public class Game extends ApplicationAdapter {
             this.message.setText("");
         }
         */
+
+        if( player1.energy < Player.MAX_ENERGY ) {
+            player1.energy++;
+        }
+        if( player2.energy < Player.MAX_ENERGY ) {
+            player2.energy++;
+        }
+
+        if( player1.invulnerable > 0 ) {
+            player1.invulnerable--;
+        }
+        if( player2.invulnerable > 0 ) {
+            player2.invulnerable--;
+        }
+
     }
 
 
@@ -354,14 +429,17 @@ public class Game extends ApplicationAdapter {
             return;
         }
 
-
-
-
         // do  movement
         player.sprite.translate(xoffset, yoffset);
         if (player1ScrollOffset[0] != 0 || player1ScrollOffset[1] != 0 ) {
             // do background scrolling
             camera.translate(player1ScrollOffset[0], player1ScrollOffset[1]);
+        }
+
+        boolean touchesFire = getConstructionElementAt(player.sprite.getX(), player.sprite.getY()) != null;
+        if( touchesFire ) {
+            player.health--;
+            player.invulnerable = Player.MAX_INVULNERABLE;
         }
     }
 
@@ -407,13 +485,31 @@ public class Game extends ApplicationAdapter {
 
     private void drawActors(SpriteBatch batch) {
 
+        if( player1.invulnerable > 0 || player1.health == 0) {
+            player1.sprite.setAlpha(tickCount % 10 > 5 ? 0.3f : 0.0f);
+        }
+        else {
+            player1.sprite.setAlpha(1.0f);
+        }
+
+
+
+        if( player2.invulnerable > 0 || player2.health == 0) {
+            player2.sprite.setAlpha(tickCount % 10 > 5 ? 0.3f : 0.0f);
+        }
+        else {
+            player2.sprite.setAlpha(1.0f);
+        }
+
         player1.sprite.draw(batch);
         player2.sprite.draw(batch);
     }
 
     private void drawForeground(SpriteBatch batch) {
         message.draw(batch, 0.5f);
-        debugOutput.draw(batch, 0.5f);
+        //debugOutput.draw(batch, 0.5f);
+        player1Status.draw(batch, 0.3f);
+        player2Status.draw(batch, 0.3f);
     }
 
     /**
@@ -425,6 +521,17 @@ public class Game extends ApplicationAdapter {
         int tileYpos = (int) Math.floor(y / worldObstacleLayer.getTileHeight());
 
         return worldObstacleLayer.getCell(tileXpos, tileYpos);
+    }
+
+    /**
+     * obstacle tile at a given position or null if no roadblock
+     */
+    private TiledMapTileLayer.Cell getConstructionElementAt(float x, float y) {
+
+        int tileXpos = (int) Math.floor(x / constructionLayer.getTileWidth());
+        int tileYpos = (int) Math.floor(y / constructionLayer.getTileHeight());
+
+        return constructionLayer.getCell(tileXpos, tileYpos);
     }
 
     private void log(String message) {
